@@ -23,6 +23,8 @@ Org-wide standards, release tooling, and reusable GitHub Actions workflows for a
 | `profile/README.md` | Org landing page shown at github.com/fissible |
 | `.github/workflows/test-bash.yml` | Reusable CI workflow — bash matrix (3.2 + 5.x) |
 | `.github/workflows/release.yml` | Reusable release workflow — creates GitHub Release on tag push |
+| `mcp/server.py` | Fissible versioning MCP server — 4 tools for version auditing and release advice |
+| `mcp/requirements.txt` | Python deps for the MCP server (`mcp>=1.0.0`) |
 
 ---
 
@@ -174,6 +176,32 @@ Full details in [RELEASE.md](./RELEASE.md). Short version:
 
 ---
 
+## Versioning MCP server
+
+`mcp/server.py` is a FastMCP server registered globally in `~/.claude.json`. It gives Claude Code
+near-zero-cost access to version state across all fissible repos.
+
+### Tools
+
+| Tool | Purpose |
+|---|---|
+| `fissible_version(repo)` | Fast VERSION vs git tag alignment check |
+| `fissible_audit(repo)` | Full audit: VERSION, tag, CHANGELOG, composer.json, package.json |
+| `fissible_audit_all()` | Cross-repo audit across all `~/lib/fissible/*` repos with a VERSION file |
+| `fissible_release_advice(repo)` | Commits since last tag, bump suggestion, categorized changes |
+
+`repo` accepts a bare name (`seed`), a prefixed name (`fissible/seed`), or an absolute path.
+
+### Setup
+
+```bash
+pip3 install mcp
+claude mcp add fissible /opt/homebrew/bin/python3 \
+  /Users/allenmccabe/lib/fissible/.github/mcp/server.py --scope user
+```
+
+---
+
 ## Dependencies
 
 | Tool | Install | Used by |
@@ -181,3 +209,4 @@ Full details in [RELEASE.md](./RELEASE.md). Short version:
 | `git-cliff` | `brew install git-cliff` | `release.sh`, manual CHANGELOG generation |
 | `git` | system | everything |
 | `bash` | system (3.2+) | test suite, release.sh |
+| `python3` + `mcp` | `brew install python3 && pip3 install mcp` | MCP server |
