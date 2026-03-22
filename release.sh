@@ -18,6 +18,10 @@ confirm() { printf '%s [y/N] ' "$1"; read -r ans; [[ "$ans" =~ ^[Yy]$ ]]; }
 command -v git-cliff >/dev/null 2>&1 || die "git-cliff not installed (brew install git-cliff)"
 command -v git >/dev/null 2>&1 || die "git not found"
 
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+[[ "$current_branch" == "main" ]] \
+    || die "Releases must be cut from main (currently on: $current_branch)"
+
 git diff --quiet && git diff --cached --quiet \
     || die "Working tree is dirty — commit or stash changes first"
 

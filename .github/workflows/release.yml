@@ -27,6 +27,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify tag is on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "Tag is not on main — release aborted."; exit 1; }
+
       - name: Extract release notes from CHANGELOG.md
         id: notes
         run: |
