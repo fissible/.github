@@ -269,9 +269,12 @@ def fissible_new_issue(repo: str, title: str, body: str, labels: list) -> str:
     if r.returncode != 0:
         return f"ERROR: gh issue create failed: {r.stderr.strip()}"
 
-    data = json.loads(r.stdout)
-    number = data["number"]
-    url = data["url"]
+    try:
+        data = json.loads(r.stdout)
+        number = data["number"]
+        url = data["url"]
+    except (json.JSONDecodeError, KeyError) as e:
+        return f"ERROR: unexpected gh output: {e}: {r.stdout[:200]}"
     worker = f'claude --cwd ~/lib/fissible/{name} "Work on issue #{number}: {title}"'
 
     return "\n".join([

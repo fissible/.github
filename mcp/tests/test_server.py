@@ -306,6 +306,7 @@ class TestFissibleNewIssue(unittest.TestCase):
         return mock
 
     def _fake_gh_error(self, msg="label not found"):
+        """Return a mock subprocess result simulating a gh failure (non-zero exit)."""
         mock = MagicMock()
         mock.returncode = 1
         mock.stdout = ""
@@ -384,6 +385,15 @@ class TestFissibleNewIssue(unittest.TestCase):
         """fissible_new_issue accepts 'fissible/seed' same as bare 'seed'."""
         mock_run.return_value = self._fake_gh()
         self.server.fissible_new_issue("fissible/seed", "t", "b", [])
+        args = mock_run.call_args[0][0]
+        repo_idx = args.index("--repo")
+        self.assertEqual(args[repo_idx + 1], "fissible/seed")
+
+    @patch('server.subprocess.run')
+    def test_absolute_path_repo(self, mock_run):
+        """fissible_new_issue accepts an absolute path and extracts the repo name."""
+        mock_run.return_value = self._fake_gh()
+        self.server.fissible_new_issue("/home/user/lib/fissible/seed", "t", "b", [])
         args = mock_run.call_args[0][0]
         repo_idx = args.index("--repo")
         self.assertEqual(args[repo_idx + 1], "fissible/seed")
