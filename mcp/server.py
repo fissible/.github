@@ -23,6 +23,19 @@ mcp = FastMCP("fissible")
 
 FISSIBLE_ROOT = os.path.expanduser("~/lib/fissible")
 
+REPO_DESCRIPTIONS = {
+    ".github":          "org-wide standards, CI workflows, release tooling, MCP server",
+    "guit":             "terminal git client (proprietary)",
+    "homebrew-tap":     "Homebrew formula repository",
+    "macbin":           "personal macOS toolbox (gflow, gitag, gdiff)",
+    "projects":         "suite planning and project management",
+    "ptyunit":          "standalone PTY test framework",
+    "seed":             "bash fake data generator (31 generators, MCP server)",
+    "shellframe":       "TUI framework (~10K lines, 714 tests)",
+    "shellql":          "terminal SQLite workbench (shellframe-based)",
+    "sigil-workspace":  "Rust credential broker (sigil CLI + sanctum daemon)",
+}
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -201,6 +214,29 @@ def fissible_audit_all() -> str:
         lines.append(f"  {mark}  {r['repo']:<20} VERSION={r['version']:<10} tag={r['tag']}")
     ok_count = sum(1 for r in results if r["ok"])
     lines += ["", f"{ok_count}/{len(results)} repos aligned"]
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def fissible_repos() -> str:
+    """List all fissible repos with one-line descriptions for issue routing.
+
+    Returns a formatted table of every git repo under ~/lib/fissible/.
+    Repos not in the static descriptions dict show '(no description)'.
+    """
+    root = Path(FISSIBLE_ROOT)
+    if not root.exists():
+        return f"ERROR: {root} not found"
+
+    lines = []
+    for d in sorted(root.iterdir()):
+        if not d.is_dir() or not (d / ".git").exists():
+            continue
+        desc = REPO_DESCRIPTIONS.get(d.name, "(no description)")
+        lines.append(f"{d.name:<20} — {desc}")
+
+    if not lines:
+        return "No fissible repos found."
     return "\n".join(lines)
 
 

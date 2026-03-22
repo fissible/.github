@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -241,6 +242,54 @@ class TestFissibleReleaseAdvice(unittest.TestCase):
                   commits=['feat: first feature'])
         result = self.server.fissible_release_advice('myrepo')
         self.assertIn('minor', result)
+
+
+class TestFissibleRepos(unittest.TestCase):
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        import server as s
+        s.FISSIBLE_ROOT = self.tmpdir
+        self.server = s
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_lists_git_repos(self):
+        """fissible_repos includes repos that have a .git directory."""
+        make_repo(f'{self.tmpdir}/alpha')
+        make_repo(f'{self.tmpdir}/beta')
+        result = self.server.fissible_repos()
+        self.assertIn('alpha', result)
+        self.assertIn('beta', result)
+
+    def test_skips_non_git_dirs(self):
+        """fissible_repos excludes dirs that are not git repos."""
+        os.makedirs(f'{self.tmpdir}/notarepo')
+        make_repo(f'{self.tmpdir}/realrepo')
+        result = self.server.fissible_repos()
+        self.assertNotIn('notarepo', result)
+        self.assertIn('realrepo', result)
+
+    def test_known_repo_shows_description(self):
+        """fissible_repos shows static description for repos in REPO_DESCRIPTIONS."""
+        make_repo(f'{self.tmpdir}/seed')
+        result = self.server.fissible_repos()
+        self.assertIn('seed', result)
+        self.assertIn('bash fake data generator', result)
+
+    def test_unknown_repo_shows_fallback(self):
+        """fissible_repos shows '(no description)' for repos not in REPO_DESCRIPTIONS."""
+        make_repo(f'{self.tmpdir}/unknownreponame')
+        result = self.server.fissible_repos()
+        self.assertIn('unknownreponame', result)
+        self.assertIn('(no description)', result)
+
+    def test_missing_root_returns_error(self):
+        """fissible_repos returns ERROR string containing the missing path."""
+        self.server.FISSIBLE_ROOT = '/tmp/fissible_does_not_exist_xyz'
+        result = self.server.fissible_repos()
+        self.assertIn('ERROR', result)
+        self.assertIn('fissible_does_not_exist_xyz', result)
 
 
 if __name__ == '__main__':
