@@ -1,0 +1,57 @@
+name: Test (bash matrix)
+
+# Reusable workflow — call from any fissible bash project:
+#
+#   jobs:
+#     test:
+#       uses: fissible/.github/.github/workflows/test-bash.yml@main
+#
+# Optional inputs:
+#   test-command   command to run (default: bash run.sh)
+#   ptyunit        whether to clone ptyunit as a sibling (default: true)
+
+on:
+  workflow_call:
+    inputs:
+      test-command:
+        description: "Command to run the test suite"
+        required: false
+        default: "bash run.sh"
+        type: string
+      ptyunit:
+        description: "Clone fissible/ptyunit as a sibling directory"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  test:
+    name: bash ${{ matrix.bash }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS ships bash 3.2 (GPL) — tests bash 3.2 compatibility
+          - os: macos-latest
+            bash: "3.2 (system)"
+          # Ubuntu ships bash 5.x — tests modern bash
+          - os: ubuntu-latest
+            bash: "5.x (system)"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Checkout ptyunit
+        if: ${{ inputs.ptyunit }}
+        uses: actions/checkout@v4
+        with:
+          repository: fissible/ptyunit
+          path: ptyunit
+
+      - name: Run tests
+        working-directory: repo
+        run: ${{ inputs.test-command }}
