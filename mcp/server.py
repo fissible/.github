@@ -5,6 +5,8 @@ Tools:
   fissible_version(repo)       — fast VERSION vs git tag alignment check
   fissible_audit(repo)         — full audit: VERSION, tag, CHANGELOG, composer.json, package.json
   fissible_audit_all()         — audit every ~/lib/fissible/* repo with a VERSION file
+  fissible_repos()             — list all fissible repos with descriptions for issue routing
+  fissible_new_issue(repo, title, body, labels) — create a GitHub issue via gh CLI
   fissible_release_advice(repo)— analyze commits since last tag, suggest bump + new version
 """
 import subprocess
@@ -238,6 +240,45 @@ def fissible_repos() -> str:
     if not lines:
         return "No fissible repos found."
     return "\n".join(lines)
+
+
+@mcp.tool()
+def fissible_new_issue(repo: str, title: str, body: str, labels: list) -> str:
+    """Create a GitHub issue in a fissible repo via gh CLI.
+
+    repo   = bare name ('seed'), 'fissible/seed', or absolute path.
+    labels = list of label strings e.g. ['bug']; may be empty.
+
+    Returns a formatted string with issue number, URL, and a ready-to-copy
+    claude worker command.
+    """
+    if os.path.isabs(repo):
+        name = Path(repo).name
+    else:
+        name = repo.removeprefix("fissible/")
+
+    cmd = ["gh", "issue", "create",
+           "--repo", f"fissible/{name}",
+           "--title", title,
+           "--body", body]
+    for label in labels:
+        cmd += ["--label", label]
+    cmd += ["--json", "number,url"]
+
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        return f"ERROR: gh issue create failed: {r.stderr.strip()}"
+
+    data = json.loads(r.stdout)
+    number = data["number"]
+    url = data["url"]
+    worker = f'claude --cwd ~/lib/fissible/{name} "Work on issue #{number}: {title}"'
+
+    return "\n".join([
+        f"issue:   #{number}",
+        f"url:     {url}",
+        f"worker:  {worker}",
+    ])
 
 
 @mcp.tool()

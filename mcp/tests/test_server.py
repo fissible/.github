@@ -292,5 +292,110 @@ class TestFissibleRepos(unittest.TestCase):
         self.assertIn('fissible_does_not_exist_xyz', result)
 
 
+class TestFissibleNewIssue(unittest.TestCase):
+    def setUp(self):
+        import server as s
+        self.server = s
+
+    def _fake_gh(self, number=47, url="https://github.com/fissible/seed/issues/47"):
+        """Return a mock subprocess result simulating `gh issue create --json number,url`."""
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({"number": number, "url": url})
+        mock.stderr = ""
+        return mock
+
+    def _fake_gh_error(self, msg="label not found"):
+        mock = MagicMock()
+        mock.returncode = 1
+        mock.stdout = ""
+        mock.stderr = msg
+        return mock
+
+    @patch('server.subprocess.run')
+    def test_correct_repo_flag(self, mock_run):
+        """fissible_new_issue passes --repo fissible/<repo> to gh."""
+        mock_run.return_value = self._fake_gh()
+        self.server.fissible_new_issue("seed", "Fix yaml", "Details", ["bug"])
+        args = mock_run.call_args[0][0]
+        repo_idx = args.index("--repo")
+        self.assertEqual(args[repo_idx + 1], "fissible/seed")
+
+    @patch('server.subprocess.run')
+    def test_title_and_body_passed_through(self, mock_run):
+        """fissible_new_issue passes --title and --body to gh."""
+        mock_run.return_value = self._fake_gh()
+        self.server.fissible_new_issue("seed", "My Title", "My Body", [])
+        args = mock_run.call_args[0][0]
+        self.assertIn("My Title", args)
+        self.assertIn("My Body", args)
+
+    @patch('server.subprocess.run')
+    def test_multiple_labels_each_get_flag(self, mock_run):
+        """fissible_new_issue emits one --label flag per label entry."""
+        mock_run.return_value = self._fake_gh()
+        self.server.fissible_new_issue("seed", "t", "b", ["bug", "urgent"])
+        args = mock_run.call_args[0][0]
+        label_indices = [i for i, a in enumerate(args) if a == "--label"]
+        self.assertEqual(len(label_indices), 2)
+        label_values = [args[i + 1] for i in label_indices]
+        self.assertIn("bug", label_values)
+        self.assertIn("urgent", label_values)
+
+    @patch('server.subprocess.run')
+    def test_empty_labels_produces_no_flag(self, mock_run):
+        """fissible_new_issue with labels=[] emits no --label flags."""
+        mock_run.return_value = self._fake_gh()
+        self.server.fissible_new_issue("seed", "t", "b", [])
+        args = mock_run.call_args[0][0]
+        self.assertNotIn("--label", args)
+
+    @patch('server.subprocess.run')
+    def test_json_flag_always_present(self, mock_run):
+        """fissible_new_issue always passes --json number,url to gh."""
+        mock_run.return_value = self._fake_gh()
+        self.server.fissible_new_issue("seed", "t", "b", [])
+        args = mock_run.call_args[0][0]
+        self.assertIn("--json", args)
+        json_idx = args.index("--json")
+        self.assertEqual(args[json_idx + 1], "number,url")
+
+    @patch('server.subprocess.run')
+    def test_return_contains_number_url_worker(self, mock_run):
+        """fissible_new_issue return string contains issue number, URL, and worker line."""
+        mock_run.return_value = self._fake_gh(number=47,
+            url="https://github.com/fissible/seed/issues/47")
+        result = self.server.fissible_new_issue("seed", "Fix yaml", "Details", ["bug"])
+        self.assertIn("#47", result)
+        self.assertIn("https://github.com/fissible/seed/issues/47", result)
+        self.assertIn("worker:", result)
+
+    @patch('server.subprocess.run')
+    def test_worker_uses_tilde_not_absolute_path(self, mock_run):
+        """fissible_new_issue worker command uses ~/lib/fissible/<repo>, not /Users/..."""
+        mock_run.return_value = self._fake_gh()
+        result = self.server.fissible_new_issue("seed", "t", "b", [])
+        worker_line = next(l for l in result.splitlines() if l.startswith("worker:"))
+        self.assertIn("~/lib/fissible/seed", worker_line)
+        self.assertNotIn("/Users/", worker_line)
+
+    @patch('server.subprocess.run')
+    def test_strips_fissible_prefix(self, mock_run):
+        """fissible_new_issue accepts 'fissible/seed' same as bare 'seed'."""
+        mock_run.return_value = self._fake_gh()
+        self.server.fissible_new_issue("fissible/seed", "t", "b", [])
+        args = mock_run.call_args[0][0]
+        repo_idx = args.index("--repo")
+        self.assertEqual(args[repo_idx + 1], "fissible/seed")
+
+    @patch('server.subprocess.run')
+    def test_gh_failure_returns_error(self, mock_run):
+        """fissible_new_issue returns ERROR string when gh exits non-zero."""
+        mock_run.return_value = self._fake_gh_error("label not found")
+        result = self.server.fissible_new_issue("seed", "t", "b", ["bad-label"])
+        self.assertTrue(result.startswith("ERROR:"))
+        self.assertIn("label not found", result)
+
+
 if __name__ == '__main__':
     unittest.main()
