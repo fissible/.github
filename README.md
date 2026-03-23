@@ -154,6 +154,8 @@ name: Release
 on:
   push:
     tags: ['v*']
+permissions:
+  contents: write
 jobs:
   release:
     uses: fissible/.github/.github/workflows/release.yml@main
