@@ -148,6 +148,14 @@ jobs:
     uses: fissible/.github/.github/workflows/test-bash.yml@main
 ```
 
+Optional `with:` inputs for `test-bash.yml`:
+
+| Input | Default | Purpose |
+|---|---|---|
+| `bootstrap-command` | _(none)_ | Run before tests (e.g. `bash bootstrap.sh` to install deps) |
+| `test-command` | `bash run.sh` | Command to run the test suite |
+| `ptyunit` | `true` | Clone `fissible/ptyunit` as a sibling directory |
+
 **5. Add release workflow** (`.github/workflows/release.yml`):
 ```yaml
 name: Release
