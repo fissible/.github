@@ -7,12 +7,18 @@ name: Test (bash matrix)
 #       uses: fissible/.github/.github/workflows/test-bash.yml@main
 #
 # Optional inputs:
-#   test-command   command to run (default: bash run.sh)
-#   ptyunit        whether to clone ptyunit as a sibling (default: true)
+#   bootstrap-command  command to run before tests (default: none)
+#   test-command       command to run (default: bash run.sh)
+#   ptyunit            whether to clone ptyunit as a sibling (default: true)
 
 on:
   workflow_call:
     inputs:
+      bootstrap-command:
+        description: "Command to run before tests (e.g. install dependencies)"
+        required: false
+        default: ""
+        type: string
       test-command:
         description: "Command to run the test suite"
         required: false
@@ -51,6 +57,11 @@ jobs:
         with:
           repository: fissible/ptyunit
           path: ptyunit
+
+      - name: Bootstrap
+        if: ${{ inputs.bootstrap-command != '' }}
+        working-directory: repo
+        run: ${{ inputs.bootstrap-command }}
 
       - name: Run tests
         working-directory: repo
