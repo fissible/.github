@@ -37,11 +37,34 @@ printf '\n'
 # --- show commits since last tag ---
 
 if [[ -n "$last_tag" ]]; then
-    printf 'Commits since %s:\n' "$last_tag"
-    git log "${last_tag}..HEAD" --oneline --no-merges
+    log_args=("${last_tag}..HEAD" "--oneline" "--no-merges")
+    label="Commits since ${last_tag}"
 else
-    printf 'All commits (no previous tag):\n'
-    git log --oneline --no-merges | head -20
+    log_args=("--oneline" "--no-merges")
+    label="All commits (no previous tag)"
+fi
+
+commits=()
+while IFS= read -r line; do
+    commits+=("$line")
+done < <(git log "${log_args[@]}")
+
+count=${#commits[@]}
+
+if [[ $count -eq 0 ]]; then
+    printf '%s:\n' "$label"
+    printf '  (no commits since last tag)\n'
+else
+    printf '%s (%d total):\n' "$label" "$count"
+    shown=$(( count < 10 ? count : 10 ))
+    for (( i=0; i<shown; i++ )); do
+        printf '  %s\n' "${commits[$i]}"
+    done
+    if [[ $count -gt 10 ]]; then
+        printf '  ... (%d more)\n' $(( count - 10 ))
+        printf '\n'
+        confirm "View all?" && git log "${log_args[@]}" | less
+    fi
 fi
 printf '\n'
 
