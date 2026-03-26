@@ -117,9 +117,16 @@ confirm "Proceed?" || { printf 'Aborted.\n'; exit 0; }
 printf '%s\n' "$new_version" > VERSION
 RUST_LOG=error git-cliff --config .cliff.toml --tag "$new_tag" --output CHANGELOG.md
 
+# --- update package.json if present ---
+
+if [[ -f package.json ]]; then
+    sed -i'' -e "s/\"version\": \"[^\"]*\"/\"version\": \"${new_version}\"/" package.json
+fi
+
 # --- commit and tag ---
 
 git add VERSION CHANGELOG.md
+[[ -f package.json ]] && git add package.json
 git commit -m "chore: release ${new_tag}"
 git tag -a "$new_tag" -m "$new_tag"
 
