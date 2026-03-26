@@ -92,7 +92,7 @@ confirm "Proceed?" || { printf 'Aborted.\n'; exit 0; }
 # --- update files ---
 
 printf '%s\n' "$new_version" > VERSION
-git-cliff --config .cliff.toml --tag "$new_tag" --output CHANGELOG.md
+RUST_LOG=error git-cliff --config .cliff.toml --tag "$new_tag" --output CHANGELOG.md
 
 # --- commit and tag ---
 
