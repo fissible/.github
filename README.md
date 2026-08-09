@@ -169,7 +169,18 @@ jobs:
     uses: fissible/.github/.github/workflows/release.yml@main
 ```
 
-**6. Add to `PROJECT.md`** — include a "Current version" line and link to this README.
+**6. Add the `FISSIBLE_PAT` secret to the new repo.** This is a **per-repo**
+Actions secret — it is not org-wide and `gh repo create` does not carry it
+over from other repos, so every new repo needs it added explicitly or CI's
+`composer install` step fails with `Could not authenticate against
+github.com` (a different failure than the PAT access-list propagation delay
+covered in `RELEASE.md`/local troubleshooting notes — check
+`gh api repos/<org>/<repo>/actions/secrets/FISSIBLE_PAT` for a 404 to confirm
+it's actually missing before assuming propagation delay). Add it via
+`https://github.com/<org>/<repo>/settings/secrets/actions` → New repository
+secret → name `FISSIBLE_PAT`, same value used on sibling repos.
+
+**7. Add to `PROJECT.md`** — include a "Current version" line and link to this README.
 
 ---
 
