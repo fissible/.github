@@ -68,9 +68,22 @@ else
 fi
 printf '\n'
 
+# --- first release: an untagged VERSION is itself unreleased ---
+
+first_release=0
+if [[ -z "$last_tag" ]]; then
+    printf 'No previous tag exists, so %s in VERSION is itself unreleased.\n' "$current"
+    if confirm "Release ${current} as the first release (no bump)?"; then
+        first_release=1
+    fi
+    printf '\n'
+fi
+
 # --- determine bump type ---
 
-if [[ -n "$1" ]]; then
+if [[ $first_release -eq 1 ]]; then
+    bump="none"
+elif [[ -n "$1" ]]; then
     bump="$1"
 else
     # Suggest bump from conventional commit types
@@ -93,7 +106,7 @@ EOF
 fi
 
 case "$bump" in
-    patch|minor|major) ;;
+    none|patch|minor|major) ;;
     *) die "Unknown bump type: '$bump' — use patch, minor, or major" ;;
 esac
 
@@ -104,6 +117,7 @@ case "$bump" in
     major) major=$((major + 1)); minor=0; patch=0 ;;
     minor) minor=$((minor + 1)); patch=0 ;;
     patch) patch=$((patch + 1)) ;;
+    none)  ;;
 esac
 
 new_version="${major}.${minor}.${patch}"
